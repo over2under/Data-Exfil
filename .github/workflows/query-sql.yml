@@ -1,1 +1,45 @@
+name: Query Azure SQL Addresses
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  query-db:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: 4523e873-a47e-449e-9751-0da47c3453ca
+          tenant-id: bc7a010a-0eae-42a4-9110-1411e1ff81cf
+          allow-no-subscriptions: true
+          audience: api://AzureADTokenExchange
+
+      - name: Install SqlServer PowerShell module
+        shell: pwsh
+        run: |
+          Install-Module SqlServer -Force -Scope CurrentUser
+
+      - name: Query Azure SQL with App Registration token
+        shell: pwsh
+        run: |
+          $token = az account get-access-token `
+            --resource https://database.windows.net/ `
+            --query accessToken -o tsv
+
+          Write-Host "Token preview:"
+          Write-Host ($token.Substring(0,60) + "...")
+
+          Import-Module SqlServer
+
+          Invoke-Sqlcmd `
+            -ServerInstance "fedtest-sql01.database.windows.net" `
+            -Database "FedTestDB" `
+            -AccessToken $token `
+            -Query "SELECT FirstName, LastName, Address, AccountNumber FROM dbo.Addresses"
 
