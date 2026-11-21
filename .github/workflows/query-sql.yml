@@ -1,7 +1,11 @@
+
 name: Query Azure SQL Addresses
 
-on:
+'on':
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   id-token: write
@@ -32,8 +36,9 @@ jobs:
             --resource https://database.windows.net/ `
             --query accessToken -o tsv
 
-          Write-Host "Token preview:"
-          Write-Host ($token.Substring(0,60) + "...")
+          if (-not $token) {
+            throw "Unable to retrieve Azure SQL access token."
+          }
 
           Import-Module SqlServer
 
@@ -41,5 +46,4 @@ jobs:
             -ServerInstance "fedtest-sql01.database.windows.net" `
             -Database "FedTestDB" `
             -AccessToken $token `
-            -Query "SELECT FirstName, LastName, Address, AccountNumber FROM dbo.Addresses"
-
+            -Query "SELECT TOP (5) FirstName, LastName FROM dbo.Addresses"
